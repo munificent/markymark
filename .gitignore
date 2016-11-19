@@ -1,0 +1,6 @@
+# IntelliJ stuff.
+.idea/
+
+# Pub stuff.
+.packages
+.pub/
