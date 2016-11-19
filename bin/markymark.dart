@@ -1,118 +1,51 @@
+#!/usr/bin/env dart
 import 'dart:io';
-
-import 'package:markdown/markdown.dart';
+import 'package:markymark/args.dart';
+import 'package:markymark/markymark.dart';
 import 'package:path/path.dart' as p;
-import 'package:shelf/shelf.dart' as shelf;
-import 'package:shelf/shelf_io.dart' as io;
-import 'package:shelf_static/shelf_static.dart';
 
-const template = """
-<!DOCTYPE html>
-<html>
-<head>
-<meta http-equiv="Content-type" content="text/html;charset=UTF-8" />
-<title>{{title}}</title>
-<style>
-body {
-  max-width: 672px;
-  margin: 48px auto;
+final parser = createArgParser();
 
-  font: normal 16px/24px 'PT Serif', Georgia, serif;
+main(List<String> args) {
+  try {
+    var result = parser.parse(args);
 
-  background: hsl(40, 40%, 97%);
-  color: hsl(200, 20%, 20%);
-}
+    if (result['help']) return printUsage(args);
 
-code, pre {
-  border-radius: 3px;
-  background: #fff;
-  color: hsl(200, 20%, 40%);
-}
-
-pre {
-  padding: 12px;
-  margin: -12px;
-
-  font-size: 14px;
-  line-height: 20px;
-}
-
-code {
-  padding: 1px 4px;
-}
-
-h1 {
-  margin: 24px 0;
-  font: normal 48px/48px 'PT Sans', Helvetica, sans-serif;
-}
-
-h2 {
-  margin: 48px 0 24px 0;
-  font: bold 30px/48px 'PT Sans', Helvetica, sans-serif;
-}
-
-h3 {
-  margin: 48px 0 24px 0;
-  font: italic 24px/24px 'PT Sans', Helvetica, sans-serif;
-}
-
-p {
-  margin: 24px 0;
-}
-</style>
-</head>
-<body>
-<h1>{{title}}</h1>
-{{body}}
-</body>
-</html>
-""";
-
-final Set<String> markdownExtensions = [".md", ".mdown", ".markdown"].toSet();
-
-String rootDirectory = ".";
-
-void main(List<String> args) {
-  if (args.length == 1) {
-    rootDirectory = args[0];
-  } else if (args.length > 1) {
-    print("Usage: markymark [dir]");
-    print("");
-    print("  Runs a simple static web server out of [dir]. If omitted, serves");
-    print("  the current directory. Viewing a Markdown file will render it to");
-    print("  HTML.");
-    print("");
-    exit(64);
+    return createServer(result, callback).then((server) {
+      print('Serving at http://${server.address.host}:${server.port}');
+    });
+  } catch (e) {
+    if (e is FormatException) {
+      return printUsage(args);
+    }
   }
+}
 
-  var handler = new shelf.Cascade()
-      .add(markdownHandler)
-      .add(createStaticHandler(rootDirectory,
-          defaultDocument: 'index.html', listDirectories: true))
-      .handler;
+printUsage(List<String> args) {
+  print("Usage: markymark [options...] [dir]");
+  print("");
+  print("Runs a simple static web server out of [dir]. If omitted, serves");
+  print("the current directory. Viewing a Markdown file will render it to");
+  print("HTML. Rendered HTML pages will auto-reload on changes.");
+  print("");
+  print("Options:");
+  print("");
+  print(parser.usage);
 
-  io.serve(handler, 'localhost', 8080).then((server) {
-    print('Serving at http://${server.address.host}:${server.port}');
+  if (!args.contains('--help') && !args.contains('-h')) exit(64);
+}
+
+callback(Directory dir, broadcast) {
+  dir.watch(recursive: true).listen((e) {
+    if (!markdownExtensions.contains(p.url.extension(e.path).toLowerCase()))
+      return;
+
+    print('The following file changed: ${e.path}');
+
+    final relative = p.relative(e.path, from: dir.absolute.path);
+    broadcast({'filename': dir.absolute.uri.resolve(relative).toString()});
   });
-}
 
-shelf.Response markdownHandler(shelf.Request request) {
-  var extension = p.url.extension(request.url.path).toLowerCase();
-  if (!markdownExtensions.contains(extension)) {
-    // Let the static handler handle it.
-    return new shelf.Response.notFound("Not a markdown file.");
-  }
-
-  var parts = [rootDirectory]..addAll(request.url.pathSegments);
-  var localPath = p.joinAll(parts);
-
-  var markdown = new File(localPath).readAsStringSync();
-  var body = markdownToHtml(markdown);
-
-  var html = template
-      .replaceAll("{{title}}", p.basenameWithoutExtension(localPath))
-      .replaceAll("{{body}}", body);
-
-  var headers = {HttpHeaders.CONTENT_TYPE: "text/html"};
-  return new shelf.Response.ok(html, headers: headers);
+  print('Watching directory: ${dir.absolute.path}');
 }
