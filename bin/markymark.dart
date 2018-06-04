@@ -60,14 +60,15 @@ p {
   margin: 24px 0;
 }
 </style>
+<title>{{title}}</title>
 </head>
 <body>
-<h1>{{title}}</h1>
-{{body}}
+{{header}}{{body}}
 </body>
 </html>
 """;
 
+final titlePattern = new RegExp("^# (.*)");
 final Set<String> markdownExtensions = [".md", ".mdown", ".markdown"].toSet();
 
 String rootDirectory = ".";
@@ -109,8 +110,18 @@ shelf.Response markdownHandler(shelf.Request request) {
   var markdown = new File(localPath).readAsStringSync();
   var body = markdownToHtml(markdown);
 
+  var header = "";
+  var title = p.basenameWithoutExtension(localPath);
+  var match = titlePattern.firstMatch(markdown);
+  if (match != null) {
+    title = match.group(1);
+  } else {
+    header = "<h1>$title</h2>\n";
+  }
+
   var html = template
-      .replaceAll("{{title}}", p.basenameWithoutExtension(localPath))
+      .replaceAll("{{title}}", title)
+      .replaceAll("{{header}}", header)
       .replaceAll("{{body}}", body);
 
   var headers = {HttpHeaders.CONTENT_TYPE: "text/html"};
