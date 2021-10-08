@@ -1,10 +1,12 @@
 name: markymark
 description: A simple web server to preview your Markdown files.
 version: 0.1.0
+environment:
+  sdk: '>=2.12.0 <3.0.0'
 dependencies:
-  markdown: ^0.11.0
-  path: ^1.0.0
-  shelf: ^0.6.7+1
-  shelf_static: ^0.2.4
+  markdown: any
+  path: any
+  shelf: any
+  shelf_static: any
 executables:
   markymark:

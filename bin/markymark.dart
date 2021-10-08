@@ -11,22 +11,30 @@ const template = """
 <html>
 <head>
 <meta http-equiv="Content-type" content="text/html;charset=UTF-8" />
-<title>{{title}}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro&family=Source+Serif+Pro:ital,wght@0,300;0,400;0,600;1,400&display=swap" rel="stylesheet"> 
 <style>
+html {
+  background: hsl(0, 0%, 90%);
+}
+
 body {
-  max-width: 672px;
-  margin: 48px auto;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 48px;
 
-  font: normal 16px/24px 'PT Serif', Georgia, serif;
+  font: normal 17px/24px 'Source Serif Pro', Georgia, serif;
 
-  background: hsl(40, 40%, 97%);
-  color: hsl(200, 20%, 20%);
+  background: hsl(0, 0%, 100%);
+  color: hsl(0, 0%, 20%);
 }
 
 code, pre {
+  font-family: 'Source Code Pro', monospace;
   border-radius: 3px;
-  background: #fff;
-  color: hsl(200, 20%, 40%);
+  background: hsl(0, 0%, 97%);
+  color: hsl(0, 0%, 40%);
 }
 
 pre {
@@ -41,23 +49,39 @@ code {
   padding: 1px 4px;
 }
 
+pre code {
+  padding: 0;
+}
+
 h1 {
   margin: 24px 0;
-  font: normal 48px/48px 'PT Sans', Helvetica, sans-serif;
+  font: normal 48px/48px 'Source Serif Pro', Georgia, serif;
 }
 
 h2 {
   margin: 48px 0 24px 0;
-  font: bold 30px/48px 'PT Sans', Helvetica, sans-serif;
+  font: bold 30px/48px 'Source Serif Pro', Georgia, serif;
 }
 
 h3 {
   margin: 48px 0 24px 0;
-  font: italic 24px/24px 'PT Sans', Helvetica, sans-serif;
+  font: italic 24px/24px 'Source Serif Pro', Georgia, serif;
 }
 
 p {
   margin: 24px 0;
+}
+
+li > p:first-child {
+  margin-top: 0;
+}
+
+li > p:last-child {
+  margin-bottom: 0;
+}
+
+li + li {
+  margin-top: 12px;
 }
 </style>
 <title>{{title}}</title>
@@ -114,7 +138,7 @@ shelf.Response markdownHandler(shelf.Request request) {
   var title = p.basenameWithoutExtension(localPath);
   var match = titlePattern.firstMatch(markdown);
   if (match != null) {
-    title = match.group(1);
+    title = match[1]!;
   } else {
     header = "<h1>$title</h2>\n";
   }
@@ -124,6 +148,6 @@ shelf.Response markdownHandler(shelf.Request request) {
       .replaceAll("{{header}}", header)
       .replaceAll("{{body}}", body);
 
-  var headers = {HttpHeaders.CONTENT_TYPE: "text/html"};
+  var headers = {HttpHeaders.contentTypeHeader: "text/html"};
   return new shelf.Response.ok(html, headers: headers);
 }

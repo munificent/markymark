@@ -1,6 +1,6 @@
 # IntelliJ stuff.
 .idea/
 
-# Pub stuff.
+# Dart stuff.
+.dart_tool/
 .packages
-.pub/
