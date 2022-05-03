@@ -8,5 +8,6 @@ dependencies:
   path: any
   shelf: any
   shelf_static: any
+  yaml: ^3.1.0
 executables:
   markymark:

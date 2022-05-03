@@ -5,6 +5,7 @@ import 'package:path/path.dart' as p;
 import 'package:shelf/shelf.dart' as shelf;
 import 'package:shelf/shelf_io.dart' as io;
 import 'package:shelf_static/shelf_static.dart';
+import 'package:yaml/yaml.dart';
 
 const template = """
 <!DOCTYPE html>
@@ -112,8 +113,7 @@ void main(List<String> args) {
 
   var handler = new shelf.Cascade()
       .add(markdownHandler)
-      .add(createStaticHandler(rootDirectory,
-          defaultDocument: 'index.html', listDirectories: true))
+      .add(createStaticHandler(rootDirectory, defaultDocument: 'index.html', listDirectories: true))
       .handler;
 
   io.serve(handler, 'localhost', 8080).then((server) {
@@ -132,6 +132,15 @@ shelf.Response markdownHandler(shelf.Request request) {
   var localPath = p.joinAll(parts);
 
   var markdown = new File(localPath).readAsStringSync();
+
+  // try to process any yaml front matter
+  final sections = markdown.split("---");
+  var frontMatter;
+  if (sections.length == 3) {
+    frontMatter = loadYaml(sections[1]);
+    markdown = sections[2];
+  }
+
   var body = markdownToHtml(markdown);
 
   var header = "";
@@ -139,14 +148,13 @@ shelf.Response markdownHandler(shelf.Request request) {
   var match = titlePattern.firstMatch(markdown);
   if (match != null) {
     title = match[1]!;
+  } else if (frontMatter["title"] != null) {
+    title = frontMatter["title"];
   } else {
     header = "<h1>$title</h2>\n";
   }
 
-  var html = template
-      .replaceAll("{{title}}", title)
-      .replaceAll("{{header}}", header)
-      .replaceAll("{{body}}", body);
+  var html = template.replaceAll("{{title}}", title).replaceAll("{{header}}", header).replaceAll("{{body}}", body);
 
   var headers = {HttpHeaders.contentTypeHeader: "text/html"};
   return new shelf.Response.ok(html, headers: headers);
